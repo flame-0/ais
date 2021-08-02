@@ -56,9 +56,9 @@ echo LANG=en_US.UTF-8 > /etc/locale.conf
 
 # Network Configuration
 echo ${hostname} > /etc/hostname
-echo -e "127.0.0.1\tlocalhost" >> /etc/hosts
-echo -e "::1\t\tlocalhost" >> /etc/hosts
-echo -e "127.0.1.1\t${hostname}.localdomain\t${hostname}" >> /etc/hosts
+echo -e "127.0.0.1 localhost" >> /etc/hosts
+echo -e "::1       localhost" >> /etc/hosts
+echo -e "127.0.1.1 ${hostname}.localdomain ${hostname}" >> /etc/hosts
 systemctl enable NetworkManager
 
 # Initramfs
