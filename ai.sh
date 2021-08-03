@@ -1,21 +1,24 @@
 #!/bin/bash
 
-disk=""
-hostname=""
-timezone=""
-username=""
+read -p "Disk: " DISK
+read -p "Swap size: " SWAP_SIZE
+read -p "Hostname: " HOSTNAME
+read -p "Timezone: " TIMEZONE
+read -p "Root password: " ROOT_PASSWORD
+read -p "Username: " USERNAME
+read -p "Password: " PASSWORD
 
 # Update the system clock
 timedatectl set-ntp true
 
 # Partition the disk
-fdisk ${disk} << EOF
+fdisk ${DISK} << EOF
 o
 n
 p
 1
 
-+8192M
+${SWAP_SIZE}
 t
 82
 n
@@ -29,12 +32,12 @@ w
 EOF
 
 # Format the partition
-mkfs.ext4 ${disk}2
-mkswap ${disk}1
+mkfs.ext4 ${DISK}2
+mkswap ${DISK}1
 
 # Mount the file systems
-mount ${disk}2 /mnt
-swapon ${disk}1
+mount ${DISK}2 /mnt
+swapon ${DISK}1
 
 # Install base and essential packages
 pacstrap /mnt base linux linux-firmware base-devel amd-ucode xf86-video-amdgpu networkmanager grub os-prober ntfs-3g xdg-user-dirs nano xorg xorg-xinit
@@ -46,7 +49,7 @@ genfstab -U /mnt >> /mnt/etc/fstab
 arch-chroot /mnt
 
 # Time Zone
-ln -sf /usr/share/zoneinfo/${timezone} /etc/localtime
+ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
 hwclock --systohc
 
 # Localization
@@ -55,10 +58,10 @@ locale-gen
 echo LANG=en_US.UTF-8 > /etc/locale.conf
 
 # Network Configuration
-echo ${hostname} > /etc/hostname
+echo ${HOSTNAME} > /etc/hostname
 echo -e "127.0.0.1 localhost" >> /etc/hosts
 echo -e "::1       localhost" >> /etc/hosts
-echo -e "127.0.1.1 ${hostname}.localdomain ${hostname}" >> /etc/hosts
+echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
 systemctl enable NetworkManager
 
 # Initramfs
@@ -66,10 +69,10 @@ sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
 mkinitcpio -p linux
 
 # Root Password
-passwd
+echo root:${ROOT_PASSWORD} | chpasswd
 
 # Boot Loader
-grub-install --target=i386-pc ${disk}
+grub-install --target=i386-pc ${DISK}
 sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
 sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
 sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
@@ -78,9 +81,8 @@ grub-mkconfig -o /boot/grub/grub.cfg
 # User Permissions
 
 # Create User Account
-useradd ${username} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-passwd ${username}
-
+useradd ${ROOT_PASSWORD} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
+echo ${USERNAME}:${PASSWORD} | chpasswd
 
 # Reboot
 exit
