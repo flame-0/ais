@@ -4,9 +4,28 @@ read -p "Disk: " DISK
 read -p "Swap size: " SWAP_SIZE
 read -p "Hostname: " HOSTNAME
 read -p "Timezone: " TIMEZONE
-read -p "Root password: " ROOT_PASSWORD
+
+# Root Password
+while true; do
+  read -s -p "Root password: " ROOT_PASSWORD0
+  echo
+  read -s -p "Re-enter password: " ROOT_PASSWORD1
+  echo
+  [ "${ROOT_PASSWORD0}" = "${ROOT_PASSWORD1}" ] && break
+  echo "Passwords did not match."
+done
+
+# Add a user
 read -p "Username: " USERNAME
-read -p "Password: " PASSWORD
+while true; do
+  read -s -p "Password for ${USERNAME}: " USER_PASSWORD0
+  echo
+  read -s -p "Re-enter password: " USER_PASSWORD1
+  echo
+  [ "${USER_PASSWORD0}" = "${USER_PASSWORD1}" ] && break
+  echo "Passwords did not match."
+done
+echo
 
 # Update the system clock
 timedatectl set-ntp true
@@ -69,7 +88,7 @@ sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
 mkinitcpio -p linux
 
 # Root Password
-echo root:${ROOT_PASSWORD} | chpasswd
+echo root:${ROOT_PASSWORD1} | chpasswd
 
 # Boot Loader
 grub-install --target=i386-pc ${DISK}
@@ -82,7 +101,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 
 # Create User Account
 useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-echo ${USERNAME}:${PASSWORD} | chpasswd
+echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
 
 # Reboot
 exit
