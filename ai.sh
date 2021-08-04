@@ -81,7 +81,7 @@ grub-mkconfig -o /boot/grub/grub.cfg
 # User Permissions
 
 # Create User Account
-useradd ${ROOT_PASSWORD} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
+useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
 echo ${USERNAME}:${PASSWORD} | chpasswd
 
 # Reboot
