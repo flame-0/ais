@@ -53,7 +53,7 @@ system_clock() {
 
 # Partition the disk
 partition_disk() {
-	fdisk ${DISK} <<-EOF
+    fdisk ${DISK} <<-EOF
         o
         n
         p
@@ -97,7 +97,7 @@ generate_fstab() {
 
 # Chroot Phase
 chroot() {
-	arch-chroot /mnt <<-EOF
+    arch-chroot /mnt <<-EOF
         # Time Zone
         ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
         hwclock --systohc
@@ -139,6 +139,7 @@ chroot() {
 unmount_partition() {
     exit
     umount -R /mnt
+    echo "You may now reboot."
     # reboot
 }
 
@@ -151,6 +152,7 @@ main() {
     install_base
     generate_fstab
     chroot
+    unmount_partition
 }
 
 main
