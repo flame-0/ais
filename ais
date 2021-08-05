@@ -47,13 +47,12 @@ OTHER_PACKAGES=(
 )
 
 # Update the system clock
-function system_clock() {
+system_clock() {
     timedatectl set-ntp true
 }
 
 # Partition the disk
-function partition_disk() {
-
+partition_disk() {
 	fdisk ${DISK} <<-EOF
         o
         n
@@ -75,84 +74,75 @@ function partition_disk() {
 }
 
 # Format the partition
-function format_partition() {
+format_partition() {
     mkfs.ext4 ${DISK}2
     mkswap ${DISK}1
 }
 
 # Mount the file systems
-function mount_partition() {
+mount_partition() {
     mount ${DISK}2 /mnt
     swapon ${DISK}1
 }
 
 # Install base and essential packages
-function install_base() {
+install_base() {
     pacstrap /mnt ${BASE_PACKAGES[@]} ${OTHER_PACKAGES[@]}
 }
 
 # Fstab
-function generate_fstab() {
+generate_fstab() {
     genfstab -U /mnt >> /mnt/etc/fstab
 }
 
 # Chroot Phase
-# Time Zone
-function set_timezone() {
-    arch-chroot /mnt ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
-    arch-chroot /mnt hwclock --systohc
+chroot() {
+	arch-chroot /mnt <<-EOF
+        # Time Zone
+        ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
+        hwclock --systohc
+
+        # Localization
+        sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
+        locale-gen
+        echo LANG=en_US.UTF-8 > /etc/locale.conf
+
+        # Network Configuration
+        echo ${HOSTNAME} > /etc/hostname
+        echo -e "127.0.0.1 localhost" >> /etc/hosts
+        echo -e "::1       localhost" >> /etc/hosts
+        echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
+        systemctl enable NetworkManager
+
+        # Initramfs
+        sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
+        mkinitcpio -p linux
+
+        # Root Password
+        echo root:${ROOT_PASSWORD1} | chpasswd
+
+        # Boot Loader
+        grub-install --target=i386-pc ${DISK}
+        sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
+        sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
+        sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
+        grub-mkconfig -o /boot/grub/grub.cfg
+
+        # User Permissions
+
+        # Create User Account
+        useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
+        echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
+	EOF
 }
 
-# Localization
-function generate_locales() {
-    arch-chroot /mnt sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
-    arch-chroot /mnt locale-gen
-    arch-chroot /mnt echo LANG=en_US.UTF-8 > /etc/locale.conf
-}
-
-# Network Configuration
-function network_configuration() {
-    arch-chroot /mnt echo ${HOSTNAME} > /etc/hostname
-    arch-chroot /mnt echo -e "127.0.0.1 localhost" >> /etc/hosts
-    arch-chroot /mnt echo -e "::1       localhost" >> /etc/hosts
-    arch-chroot /mnt echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
-    arch-chroot /mnt systemctl enable NetworkManager
-}
-
-# Initramfs
-function create_initramfs() {
-    arch-chroot /mnt sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
-    arch-chroot /mnt mkinitcpio -p linux
-}
-
-# Root Password
-function root_password() {
-    echo root:${ROOT_PASSWORD1} | chpasswd --root /mnt
-}
-
-# Boot Loader
-function boot_loader() {
-    arch-chroot /mnt grub-install --target=i386-pc ${DISK}
-    arch-chroot /mnt sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
-    arch-chroot /mnt sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
-    arch-chroot /mnt sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
-    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
-}
-
-# User Permissions
-
-# Create User Account
-function create_user() {
-    arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-    arch-chroot /mnt echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
-}
-
-function unmount_partition() {
+unmount_partition() {
+    exit
     umount -R /mnt
     # reboot
 }
 
-function main() {
+main() {
     set -eux -o pipefail
     system_clock
     partition_disk
@@ -160,14 +150,7 @@ function main() {
     mount_partition
     install_base
     generate_fstab
-    set_timezone
-    generate_locales
-    network_configuration
-    create_initramfs
-    root_password
-    boot_loader
-    create_user
-    unmount_partition
+    chroot
 }
 
 main
