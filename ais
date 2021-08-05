@@ -1,5 +1,4 @@
 #!/bin/bash
-
 read -p "Disk: " DISK
 read -p "Swap size: " SWAP_SIZE
 read -p "Hostname: " HOSTNAME
@@ -7,104 +6,168 @@ read -p "Timezone: " TIMEZONE
 
 # Root Password
 while true; do
-  read -s -p "Root password: " ROOT_PASSWORD0
-  echo
-  read -s -p "Re-enter password: " ROOT_PASSWORD1
-  echo
-  [ "${ROOT_PASSWORD0}" = "${ROOT_PASSWORD1}" ] && break
-  echo "Passwords did not match."
+    read -s -p "Root password: " ROOT_PASSWORD0
+    echo
+    read -s -p "Re-enter password: " ROOT_PASSWORD1
+    echo
+    [ "${ROOT_PASSWORD0}" = "${ROOT_PASSWORD1}" ] && break
+    echo "Passwords did not match."
 done
 
 # Add a user
 read -p "Username: " USERNAME
 while true; do
-  read -s -p "Password for ${USERNAME}: " USER_PASSWORD0
-  echo
-  read -s -p "Re-enter password: " USER_PASSWORD1
-  echo
-  [ "${USER_PASSWORD0}" = "${USER_PASSWORD1}" ] && break
-  echo "Passwords did not match."
+    read -s -p "Password for ${USERNAME}: " USER_PASSWORD0
+    echo
+    read -s -p "Re-enter password: " USER_PASSWORD1
+    echo
+    [ "${USER_PASSWORD0}" = "${USER_PASSWORD1}" ] && break
+    echo "Passwords did not match."
 done
 echo
 
+BASE_PACKAGES=(
+    base
+    linux
+    linux-firmware
+)
+
+OTHER_PACKAGES=(
+    base-devel
+    amd-ucode
+    xf86-video-amdgpu
+    networkmanager
+    grub
+    os-prober
+    ntfs-3g
+    xdg-user-dirs
+    nano
+    xorg
+    xorg-xinit
+)
+
 # Update the system clock
-timedatectl set-ntp true
+function system_clock() {
+    timedatectl set-ntp true
+}
 
 # Partition the disk
-fdisk ${DISK} << EOF
-o
-n
-p
-1
+function partition_disk() {
 
-${SWAP_SIZE}
-t
-82
-n
-p
-2
+	fdisk ${DISK} <<-EOF
+        o
+        n
+        p
+        1
+
+        ${SWAP_SIZE}
+        t
+        82
+        n
+        p
+        2
 
 
-a
-2
-w
-EOF
+        a
+        2
+        w
+	EOF
+}
 
 # Format the partition
-mkfs.ext4 ${DISK}2
-mkswap ${DISK}1
+function format_partition() {
+    mkfs.ext4 ${DISK}2
+    mkswap ${DISK}1
+}
 
 # Mount the file systems
-mount ${DISK}2 /mnt
-swapon ${DISK}1
+function mount_partition() {
+    mount ${DISK}2 /mnt
+    swapon ${DISK}1
+}
 
 # Install base and essential packages
-pacstrap /mnt base linux linux-firmware base-devel amd-ucode xf86-video-amdgpu networkmanager grub os-prober ntfs-3g xdg-user-dirs nano xorg xorg-xinit
+function install_base() {
+    pacstrap /mnt ${BASE_PACKAGES} ${OTHER_PACKAGES}
+}
 
 # Fstab
-genfstab -U /mnt >> /mnt/etc/fstab
+function generate_fstab() {
+    genfstab -U /mnt >> /mnt/etc/fstab
+}
 
-# Chroot
-arch-chroot /mnt << EOF
-
+# Chroot Phase
 # Time Zone
-ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
-hwclock --systohc
+function set_timezone() {
+    arch-chroot /mnt ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
+    arch-chroot /mnt hwclock --systohc
+}
 
 # Localization
-sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
-locale-gen
-echo LANG=en_US.UTF-8 > /etc/locale.conf
+function generate_locales() {
+    arch-chroot /mnt sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
+    arch-chroot /mnt locale-gen
+    arch-chroot /mnt echo LANG=en_US.UTF-8 > /etc/locale.conf
+}
 
 # Network Configuration
-echo ${HOSTNAME} > /etc/hostname
-echo -e "127.0.0.1 localhost" >> /etc/hosts
-echo -e "::1       localhost" >> /etc/hosts
-echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
-systemctl enable NetworkManager
+function network_configuration() {
+    arch-chroot /mnt echo ${HOSTNAME} > /etc/hostname
+    arch-chroot /mnt echo -e "127.0.0.1 localhost" >> /etc/hosts
+    arch-chroot /mnt echo -e "::1       localhost" >> /etc/hosts
+    arch-chroot /mnt echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
+    arch-chroot /mnt systemctl enable NetworkManager
+}
 
 # Initramfs
-sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
-mkinitcpio -p linux
+function create_initramfs() {
+    arch-chroot /mnt sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
+    arch-chroot /mnt mkinitcpio -p linux
+}
 
 # Root Password
-echo root:${ROOT_PASSWORD1} | chpasswd
+function root_password() {
+    echo root:${ROOT_PASSWORD1} | chpasswd
+}
 
 # Boot Loader
-grub-install --target=i386-pc ${DISK}
-sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
-sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
-sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
-grub-mkconfig -o /boot/grub/grub.cfg
+function boot_loader() {
+    arch-chroot /mnt grub-install --target=i386-pc ${DISK}
+    arch-chroot /mnt sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
+    arch-chroot /mnt sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
+    arch-chroot /mnt sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+}
 
 # User Permissions
 
 # Create User Account
-useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
-EOF
+function create_user() {
+    arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
+    arch-chroot /mnt echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
+}
 
-# Reboot
-exit
-umount -R /mnt
-reboot
+function unmount_partition() {
+    umount -R /mnt
+    # reboot
+}
+
+function main() {
+    set -euf -o pipefail
+    system_clock
+    partition_disk
+    format_partition
+    mount_partition
+    install_base
+    generate_fstab
+    set_timezone
+    generate_locales
+    network_configuration
+    create_initramfs
+    root_password
+    boot_loader
+    create_user
+    unmount_partition
+}
+
+main
