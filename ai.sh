@@ -64,46 +64,43 @@ pacstrap /mnt base linux linux-firmware base-devel amd-ucode xf86-video-amdgpu n
 # Fstab
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# Chroot
-arch-chroot /mnt
-
 # Time Zone
-ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
-hwclock --systohc
+arch-chroot /mnt ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
+arch-chroot /mnt hwclock --systohc
 
 # Localization
-sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
-locale-gen
-echo LANG=en_US.UTF-8 > /etc/locale.conf
+arch-chroot /mnt sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
+arch-chroot /mnt locale-gen
+arch-chroot /mnt echo LANG=en_US.UTF-8 > /etc/locale.conf
 
 # Network Configuration
-echo ${HOSTNAME} > /etc/hostname
-echo -e "127.0.0.1 localhost" >> /etc/hosts
-echo -e "::1       localhost" >> /etc/hosts
-echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
-systemctl enable NetworkManager
+arch-chroot /mnt echo ${HOSTNAME} > /etc/hostname
+arch-chroot /mnt echo -e "127.0.0.1 localhost" >> /etc/hosts
+arch-chroot /mnt echo -e "::1       localhost" >> /etc/hosts
+arch-chroot /mnt echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
+arch-chroot /mnt systemctl enable NetworkManager
 
 # Initramfs
-sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
-mkinitcpio -p linux
+arch-chroot /mnt sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
+arch-chroot /mnt mkinitcpio -p linux
 
 # Root Password
-echo root:${ROOT_PASSWORD1} | chpasswd
+arch-chroot /mnt echo root:${ROOT_PASSWORD1} | chpasswd
 
 # Boot Loader
-grub-install --target=i386-pc ${DISK}
-sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
-sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
-sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
-grub-mkconfig -o /boot/grub/grub.cfg
+arch-chroot /mnt grub-install --target=i386-pc ${DISK}
+arch-chroot /mnt sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
+arch-chroot /mnt sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
+arch-chroot /mnt sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
+arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 
 # User Permissions
 
 # Create User Account
-useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
+arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
+arch-chroot /mnt echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
 
 # Reboot
-exit
+# exit
 umount -R /mnt
-reboot
+# reboot
