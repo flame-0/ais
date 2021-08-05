@@ -88,7 +88,7 @@ function mount_partition() {
 
 # Install base and essential packages
 function install_base() {
-    pacstrap /mnt ${BASE_PACKAGES} ${OTHER_PACKAGES}
+    pacstrap /mnt ${BASE_PACKAGES[@]} ${OTHER_PACKAGES[@]}
 }
 
 # Fstab
