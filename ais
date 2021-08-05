@@ -53,8 +53,7 @@ function system_clock() {
 
 # Partition the disk
 function partition_disk() {
-
-	fdisk ${DISK} <<-EOF
+    fdisk ${DISK} <<-EOF
         o
         n
         p
@@ -71,7 +70,7 @@ function partition_disk() {
         a
         2
         w
-	EOF
+    EOF
 }
 
 # Format the partition
