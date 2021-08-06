@@ -1,7 +1,5 @@
 #!/bin/bash
 
-alias ac="arch-chroot /mnt"
-
 read -p "Disk: " DISK
 read -p "Swap size: " SWAP_SIZE
 read -p "Hostname: " HOSTNAME
@@ -101,30 +99,30 @@ generate_fstab() {
 # Chroot Phase
 # Time Zone
 set_timezone() {
-    ac ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
-    ac hwclock --systohc
+    arch-chroot /mnt ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
+    arch-chroot /mnt hwclock --systohc
 }
 
 # Localization
 generate_locales() {
-    ac sed -i '/#en_US.UTF-8/s/^#//g' /mnt/etc/locale.gen
-    ac locale-gen
-    ac echo LANG=en_US.UTF-8 > /mnt/etc/locale.conf
+    arch-chroot /mnt sed -i '/#en_US.UTF-8/s/^#//g' /mnt/etc/locale.gen
+    arch-chroot /mnt locale-gen
+    arch-chroot /mnt echo LANG=en_US.UTF-8 > /mnt/etc/locale.conf
 }
 
 # Network Configuration
 network_configuration() {
-    ac echo ${HOSTNAME} > /mnt/etc/hostname
-    ac echo -e "127.0.0.1 localhost" >> /mnt/etc/hosts
-    ac echo -e "::1       localhost" >> /mnt/etc/hosts
-    ac echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /mnt/etc/hosts
-    ac systemctl enable NetworkManager
+    arch-chroot /mnt echo ${HOSTNAME} > /mnt/etc/hostname
+    arch-chroot /mnt echo -e "127.0.0.1 localhost" >> /mnt/etc/hosts
+    arch-chroot /mnt echo -e "::1       localhost" >> /mnt/etc/hosts
+    arch-chroot /mnt echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /mnt/etc/hosts
+    arch-chroot /mnt systemctl enable NetworkManager
 }
 
 # Initramfs
 create_initramfs() {
-    ac sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
-    ac mkinitcpio -p linux
+    arch-chroot /mnt sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
+    arch-chroot /mnt mkinitcpio -p linux
 }
 
 # Root Password
@@ -134,11 +132,11 @@ root_password() {
 
 # Boot Loader
 boot_loader() {
-    ac grub-install --target=i386-pc ${DISK}
-    ac sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /mnt/etc/default/grub
-    ac sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /mnt/etc/default/grub
-    ac sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
-    ac grub-mkconfig -o /mnt/boot/grub/grub.cfg
+    arch-chroot /mnt grub-install --target=i386-pc ${DISK}
+    arch-chroot /mnt sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /mnt/etc/default/grub
+    arch-chroot /mnt sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /mnt/etc/default/grub
+    arch-chroot /mnt sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+    arch-chroot /mnt grub-mkconfig -o /mnt/boot/grub/grub.cfg
 }
 
 # User Permissions
@@ -148,8 +146,8 @@ user_permission() {
 
 # Create User Account
 create_user() {
-    ac useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /mnt/bin/bash
-    ac echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
+    arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /mnt/bin/bash
+    arch-chroot /mnt echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
 }
 
 unmount_partition() {
