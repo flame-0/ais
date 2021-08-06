@@ -100,13 +100,13 @@ generate_fstab() {
 # Time Zone
 set_timezone() {
     ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
-    hwclock --systohc
+    arch-chroot /mnt hwclock --systohc
 }
 
 # Localization
 generate_locales() {
     sed -i '/#en_US.UTF-8/s/^#//g' /mnt/etc/locale.gen
-    locale-gen
+    arch-chroot /mnt locale-gen
     echo LANG=en_US.UTF-8 > /mnt/etc/locale.conf
 }
 
@@ -116,13 +116,13 @@ network_configuration() {
     echo -e "127.0.0.1 localhost" >> /mnt/etc/hosts
     echo -e "::1       localhost" >> /mnt/etc/hosts
     echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /mnt/etc/hosts
-    systemctl enable NetworkManager
+    arch-chroot /mnt systemctl enable NetworkManager
 }
 
 # Initramfs
 create_initramfs() {
     sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
-    mkinitcpio -p linux
+    arch-chroot /mnt mkinitcpio -p linux
 }
 
 # Root Password
@@ -136,7 +136,7 @@ boot_loader() {
     sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /mnt/etc/default/grub
     sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /mnt/etc/default/grub
     sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
-    grub-mkconfig -o /mnt/boot/grub/grub.cfg
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 # User Permissions
