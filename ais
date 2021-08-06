@@ -132,7 +132,7 @@ root_password() {
 
 # Boot Loader
 boot_loader() {
-    grub-install --target=i386-pc ${DISK}
+    arch-chroot /mnt grub-install --target=i386-pc ${DISK}
     sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /mnt/etc/default/grub
     sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /mnt/etc/default/grub
     sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
@@ -146,7 +146,7 @@ user_permission() {
 
 # Create User Account
 create_user() {
-    useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /mnt/bin/bash
+    arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
     echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
 }
 
