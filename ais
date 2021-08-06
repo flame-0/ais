@@ -147,7 +147,7 @@ user_permission() {
 # Create User Account
 create_user() {
     arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-    echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
+    echo ${USERNAME}:${USER_PASSWORD1} | arch-chroot /mnt chpasswd
 }
 
 unmount_partition() {
