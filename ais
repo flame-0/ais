@@ -54,7 +54,7 @@ system_clock() {
 
 # Partition the disk
 partition_disk() {
-    fdisk ${DISK} | sed -e 's/^[[:space:]]*//g' <<-EOF
+    fdisk ${DISK} <<-EOF
         o
         n
         p
@@ -98,7 +98,7 @@ generate_fstab() {
 
 # Chroot Phase
 chroot() {
-    arch-chroot /mnt | sed -e 's/^[[:space:]]*//g' <<-EOF
+    arch-chroot /mnt <<-EOF
         # Time Zone
         ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
         hwclock --systohc
