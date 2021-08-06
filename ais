@@ -98,7 +98,44 @@ generate_fstab() {
 
 # Chroot Phase
 chroot() {
-    arch-chroot /mnt archroot
+    arch-chroot /mnt <<-EOF
+        # Time Zone
+        ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
+        hwclock --systohc
+
+        # Localization
+        sed -i '/#en_US.UTF-8/s/^#//g' /etc/locale.gen
+        locale-gen
+        echo LANG=en_US.UTF-8 > /etc/locale.conf
+
+        # Network Configuration
+        echo ${HOSTNAME} > /etc/hostname
+        echo -e "127.0.0.1 localhost" >> /etc/hosts
+        echo -e "::1       localhost" >> /etc/hosts
+        echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /etc/hosts
+        systemctl enable NetworkManager
+
+        # Initramfs
+        sed -i '/MODULES=()/s/)$/amdgpu)/g' /etc/mkinitcpio.conf
+        mkinitcpio -p linux
+
+        # Root Password
+        echo root:${ROOT_PASSWORD1} | chpasswd
+
+        # Boot Loader
+        grub-install --target=i386-pc ${DISK}
+        sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
+        sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
+        sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /etc/default/grub
+        grub-mkconfig -o /boot/grub/grub.cfg
+
+        # User Permissions
+        echo "${USERNAME} ALL=(ALL) ALL" >> /etc/sudoers.d/${USERNAME}
+
+        # Create User Account
+        useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
+        echo ${USERNAME}:${USER_PASSWORD1} | chpasswd
+	EOF
 }
 
 unmount_partition() {
@@ -109,7 +146,7 @@ unmount_partition() {
 }
 
 main() {
-    set -eux -o pipefail
+    set -euxo pipefail
     system_clock
     partition_disk
     format_partition
