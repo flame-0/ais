@@ -54,7 +54,7 @@ system_clock() {
 
 # Partition the disk
 partition_disk() {
-    fdisk ${DISK} <<-EOF
+    fdisk ${DISK} | sed -e 's/^[[:space:]]*//g' <<-EOF
         o
         n
         p
@@ -98,7 +98,7 @@ generate_fstab() {
 
 # Chroot Phase
 chroot() {
-    arch-chroot /mnt <<-EOF
+    arch-chroot /mnt | sed -e 's/^[[:space:]]*//g' <<-EOF
         # Time Zone
         ln -sf /usr/share/zoneinfo/${TIMEZONE} /etc/localtime
         hwclock --systohc
@@ -126,7 +126,7 @@ chroot() {
         grub-install --target=i386-pc ${DISK}
         sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /etc/default/grub
         sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /etc/default/grub
-        sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' >> /etc/default/grub
+        sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /etc/default/grub
         grub-mkconfig -o /boot/grub/grub.cfg
 
         # User Permissions
