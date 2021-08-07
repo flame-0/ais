@@ -5,7 +5,7 @@ read -p "Swap size: " SWAP_SIZE
 read -p "Hostname: " HOSTNAME
 read -p "Timezone: " TIMEZONE
 
-# Root Password
+# Add password for root
 while true; do
     read -s -p "Root password: " ROOT_PASSWORD0
     echo
@@ -15,7 +15,7 @@ while true; do
     echo "Passwords did not match."
 done
 
-# Add a user
+# Add user and its password
 read -p "Username: " USERNAME
 while true; do
     read -s -p "Password for ${USERNAME}: " USER_PASSWORD0
@@ -86,6 +86,8 @@ mount_partition() {
     swapon ${DISK}1
 }
 
+# Mirrors
+
 # Install base and essential packages
 install_base() {
     pacstrap /mnt ${BASE_PACKAGES[@]} ${OTHER_PACKAGES[@]}
@@ -99,7 +101,7 @@ generate_fstab() {
 # Chroot Phase
 # Time Zone
 set_timezone() {
-    ln -sf /mnt/usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
+    ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
     arch-chroot /mnt hwclock --systohc
 }
 
