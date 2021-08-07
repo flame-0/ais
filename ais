@@ -99,7 +99,7 @@ generate_fstab() {
 # Chroot Phase
 # Time Zone
 set_timezone() {
-    ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
+    ln -sf /mnt/usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
     arch-chroot /mnt hwclock --systohc
 }
 
@@ -116,7 +116,7 @@ network_configuration() {
     echo -e "127.0.0.1 localhost" >> /mnt/etc/hosts
     echo -e "::1       localhost" >> /mnt/etc/hosts
     echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /mnt/etc/hosts
-    arch-chroot /mnt systemctl enable NetworkManager
+    arch-chroot /mnt systemctl enable NetworkManager.service
 }
 
 # Initramfs
@@ -147,7 +147,7 @@ user_permission() {
 # Create User Account
 create_user() {
     arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power -s /bin/bash
-    echo ${USERNAME}:${USER_PASSWORD1} | arch-chroot /mnt chpasswd
+    echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
 }
 
 unmount_partition() {
