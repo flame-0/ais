@@ -1,9 +1,9 @@
 #!/bin/bash
 
-read -p "Disk: " DISK
-read -p "Swap size: " SWAP_SIZE
-read -p "Hostname: " HOSTNAME
-read -p "Timezone: " TIMEZONE
+read -p "Disk (example: /dev/sda): " DISK
+read -p "Swap size for ${DISK} (examples: +512M, +1G): " SWAP_SIZE
+read -p "Timezone (examples: Europe/London, Asia/Tokyo): " TIMEZONE
+read -p "Hostname (example: arch): " HOSTNAME
 
 # Add password for root
 while true; do
@@ -48,64 +48,70 @@ OTHER_PACKAGES=(
 )
 
 # Update the system clock
+# https://wiki.archlinux.org/title/Installation_guide#Update_the_system_clock
 system_clock() {
     timedatectl set-ntp true
 }
 
 # Partition the disk
+# https://wiki.archlinux.org/title/Installation_guide#Partition_the_disks
 partition_disk() {
-    fdisk ${DISK} <<-EOF
-        o
-        n
-        p
-        1
-
-        ${SWAP_SIZE}
-        t
-        82
-        n
-        p
-        2
-
-
-        a
-        2
-        w
-	EOF
+    # Standard input (stdin) for fdisk command:
+    # o            Create a new empty DOS partition table
+    # n            Add a new partition for swap
+    # p            Partition type: Primary
+    # 1            Partition number: 1
+    # default      First sector: default
+    # ${SWAP_SIZE} Last sector (Suggested size: More than 512 MiB): +512M/+1G
+    # t            Change the partition type
+    # 82           Hex code or alias: 82 (Linux swap / Solaris) or swap
+    # n            Add a new partition for root
+    # p            Partition type: Primary
+    # 2            Partition number: 2
+    #              First sector: default
+    #              Last sector (Suggested size: Remainder of the device): default
+    # a            Toggle a bootable flag
+    # 2            Partition number: 2
+    # w            Write table to disk
+    echo -e "o\nn\np\n1\n\n${SWAP_SIZE}\nt\n82\nn\np\n2\n\n\na\n2\nw\n" | fdisk ${DISK}
 }
 
 # Format the partition
+# https://wiki.archlinux.org/title/Installation_guide#Format_the_partitions
 format_partition() {
     mkfs.ext4 ${DISK}2
     mkswap ${DISK}1
 }
 
 # Mount the file systems
+# https://wiki.archlinux.org/title/Installation_guide#Mount_the_file_systems
 mount_partition() {
     mount ${DISK}2 /mnt
     swapon ${DISK}1
 }
 
-# Mirrors
-
 # Install base and essential packages
+# https://wiki.archlinux.org/title/Installation_guide#Install_essential_packages
 install_base() {
     pacstrap /mnt ${BASE_PACKAGES[@]} ${OTHER_PACKAGES[@]}
 }
 
 # Fstab
+# https://wiki.archlinux.org/title/Installation_guide#Fstab
 generate_fstab() {
     genfstab -U /mnt >> /mnt/etc/fstab
 }
 
 # Chroot Phase
 # Time Zone
+# https://wiki.archlinux.org/title/Installation_guide#Time_zone
 set_timezone() {
     ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
     arch-chroot /mnt hwclock --systohc
 }
 
 # Localization
+# https://wiki.archlinux.org/title/Installation_guide#Localization
 generate_locales() {
     sed -i '/#en_US.UTF-8/s/^#//g' /mnt/etc/locale.gen
     arch-chroot /mnt locale-gen
@@ -113,6 +119,7 @@ generate_locales() {
 }
 
 # Network Configuration
+# https://wiki.archlinux.org/title/Installation_guide#Network_configuration
 network_configuration() {
     echo ${HOSTNAME} > /mnt/etc/hostname
     echo -e "127.0.0.1 localhost" >> /mnt/etc/hosts
@@ -122,17 +129,20 @@ network_configuration() {
 }
 
 # Initramfs
+# https://wiki.archlinux.org/title/Installation_guide#Initramfs
 create_initramfs() {
     sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
     arch-chroot /mnt mkinitcpio -p linux
 }
 
 # Root Password
+# https://wiki.archlinux.org/title/Installation_guide#Root_password
 root_password() {
     echo root:${ROOT_PASSWORD1} | chpasswd --root /mnt
 }
 
 # Boot Loader
+# https://wiki.archlinux.org/title/Installation_guide#Boot_loader
 boot_loader() {
     arch-chroot /mnt grub-install --target=i386-pc ${DISK}
     sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /mnt/etc/default/grub
@@ -152,10 +162,11 @@ create_user() {
     echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
 }
 
+# Reboot
+# https://wiki.archlinux.org/title/Installation_guide#Reboot
 unmount_partition() {
     umount -R /mnt
     echo "You may now reboot."
-    # reboot
 }
 
 main() {
