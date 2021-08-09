@@ -11,7 +11,7 @@ while true; do
     echo
     read -s -r -p "Re-enter password: " ROOT_PASSWORD1
     echo
-    [ "$ROOT_PASSWORD0" = "$ROOT_PASSWORD1" ] && break
+    [[ "$ROOT_PASSWORD0" = "$ROOT_PASSWORD1" ]] && break
     echo "Passwords did not match."
 done
 
@@ -22,7 +22,7 @@ while true; do
     echo
     read -s -r -p "Re-enter password: " USER_PASSWORD1
     echo
-    [ "$USER_PASSWORD0" = "$USER_PASSWORD1" ] && break
+    [[ "$USER_PASSWORD0" = "$USER_PASSWORD1" ]] && break
     echo "Passwords did not match."
 done
 echo
