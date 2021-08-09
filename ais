@@ -140,7 +140,7 @@ boot_loader() {
             -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
             -e 's/\(GRUB_TIMEOUT=\)5/\120/g' \
             -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
-            grub.txt
+            /mnt/etc/default/grub
     }
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
