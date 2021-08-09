@@ -1,28 +1,28 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
-read -p "Disk (example: /dev/sda): " DISK
-read -p "Swap size for ${DISK} (examples: +512M, +1G): " SWAP_SIZE
-read -p "Timezone (examples: Europe/London, Asia/Tokyo): " TIMEZONE
-read -p "Hostname (example: arch): " HOSTNAME
+read -r -p "Disk (example: /dev/sda): " DISK
+read -r -p "Swap size for $DISK (examples: +512M, +1G): " SWAP_SIZE
+read -r -p "Timezone (examples: Europe/London, Asia/Tokyo): " TIMEZONE
+read -r -p "Hostname (example: arch): " HOSTNAME
 
 # Add password for root
 while true; do
-    read -s -p "Root password: " ROOT_PASSWORD0
+    read -s -r -p "Root password: " ROOT_PASSWORD0
     echo
-    read -s -p "Re-enter password: " ROOT_PASSWORD1
+    read -s -r -p "Re-enter password: " ROOT_PASSWORD1
     echo
-    [ "${ROOT_PASSWORD0}" = "${ROOT_PASSWORD1}" ] && break
+    [ "$ROOT_PASSWORD0" = "$ROOT_PASSWORD1" ] && break
     echo "Passwords did not match."
 done
 
 # Add user and its password
-read -p "Username: " USERNAME
+read -r -p "Username: " USERNAME
 while true; do
-    read -s -p "Password for ${USERNAME}: " USER_PASSWORD0
+    read -s -r -p "Password for $USERNAME: " USER_PASSWORD0
     echo
-    read -s -p "Re-enter password: " USER_PASSWORD1
+    read -s -r -p "Re-enter password: " USER_PASSWORD1
     echo
-    [ "${USER_PASSWORD0}" = "${USER_PASSWORD1}" ] && break
+    [ "$USER_PASSWORD0" = "$USER_PASSWORD1" ] && break
     echo "Passwords did not match."
 done
 echo
@@ -55,40 +55,40 @@ system_clock() {
 # Partition the disks
 partition_disk() {
     # Standard input (stdin) for fdisk command:
-    # o            Create an empty DOS partition table
-    # n            Add a new partition for swap
-    # p            Partition type: Primary
-    # 1            Partition number: 1
-    # default      First sector: default
-    # ${SWAP_SIZE} Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
-    # t            Change the partition type
-    # 82           Hex code or alias: 82 (Linux swap / Solaris) or swap
-    # n            Add a new partition for root
-    # p            Partition type: Primary
-    # 2            Partition number: 2
-    #              First sector: default
-    #              Last sector (Suggested size: Remainder of the device): default
-    # a            Toggle a bootable flag
-    # 2            Partition number: 2
-    # w            Write the table to disk
-    echo -e "o\nn\np\n1\n\n${SWAP_SIZE}\nt\n82\nn\np\n2\n\n\na\n2\nw\n" | fdisk ${DISK}
+    # o          Create an empty DOS partition table
+    # n          Add a new partition for swap
+    # p          Partition type: Primary
+    # 1          Partition number: 1
+    # default    First sector: default
+    # $SWAP_SIZE Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
+    # t          Change the partition type
+    # 82         Hex code or alias: 82 (Linux swap / Solaris) or swap
+    # n          Add a new partition for root
+    # p          Partition type: Primary
+    # 2          Partition number: 2
+    #            First sector: default
+    #            Last sector (Suggested size: Remainder of the device): default
+    # a          Toggle a bootable flag
+    # 2          Partition number: 2
+    # w          Write the table to disk
+    echo -e "o\nn\np\n1\n\n$SWAP_SIZE\nt\n82\nn\np\n2\n\n\na\n2\nw\n" | fdisk "$DISK"
 }
 
 # Format the partitions
 format_partition() {
-    mkfs.ext4 ${DISK}2
-    mkswap ${DISK}1
+    mkfs.ext4 "$DISK"2
+    mkswap "$DISK"1
 }
 
 # Mount the file systems
 file_system() {
-    mount ${DISK}2 /mnt
-    swapon ${DISK}1
+    mount "$DISK"2 /mnt
+    swapon "$DISK"1
 }
 
 # Install essential packages
 install_package() {
-    pacstrap /mnt ${BASE_PACKAGES[@]} ${OTHER_PACKAGES[@]}
+    pacstrap /mnt "${BASE_PACKAGES[@]}" "${OTHER_PACKAGES[@]}"
 }
 
 # Fstab
@@ -99,7 +99,7 @@ generate_fstab() {
 # Chroot phase
 # Time zone
 time_zone() {
-    ln -sf /usr/share/zoneinfo/${TIMEZONE} /mnt/etc/localtime
+    ln -sf /usr/share/zoneinfo/"$TIMEZONE" /mnt/etc/localtime
     arch-chroot /mnt hwclock --systohc
 }
 
@@ -112,10 +112,12 @@ generate_locale() {
 
 # Network configuration
 network_configuration() {
-    echo ${HOSTNAME} > /mnt/etc/hostname
-    echo -e "127.0.0.1 localhost" >> /mnt/etc/hosts
-    echo -e "::1       localhost" >> /mnt/etc/hosts
-    echo -e "127.0.1.1 ${HOSTNAME}.localdomain ${HOSTNAME}" >> /mnt/etc/hosts
+    echo "$HOSTNAME" > /mnt/etc/hostname
+    {
+        echo -e "127.0.0.1 localhost"
+        echo -e "::1       localhost"
+        echo -e "127.0.1.1 $HOSTNAME.localdomain $HOSTNAME"
+    } >> hosts.txt
     arch-chroot /mnt systemctl enable NetworkManager.service
 }
 
@@ -127,27 +129,31 @@ create_initramfs() {
 
 # Root password
 root_password() {
-    echo root:${ROOT_PASSWORD1} | chpasswd --root /mnt
+    echo root:"$ROOT_PASSWORD1" | chpasswd --root /mnt
 }
 
 # Boot loader
 boot_loader() {
-    arch-chroot /mnt grub-install --target=i386-pc ${DISK}
-    sed -i '/GRUB_DEFAULT=0/s/0$/2/g' /mnt/etc/default/grub
-    sed -i '/GRUB_TIMEOUT=5/s/5$/20/g' /mnt/etc/default/grub
-    sed -i '/GRUB_CMDLINE_LINUX=""/s/"$/"\nGRUB_DISABLE_OS_PROBER=false/g' /mnt/etc/default/grub
+    arch-chroot /mnt grub-install --target=i386-pc "$DISK"
+    {
+        sed -i \
+            -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
+            -e 's/\(GRUB_TIMEOUT=\)5/\120/g' \
+            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
+            grub.txt
+    }
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 # Add user
 add_user() {
-    arch-chroot /mnt useradd ${USERNAME} -m -g users -G wheel,lp,audio,storage,video,network,power
-    echo ${USERNAME}:${USER_PASSWORD1} | chpasswd --root /mnt
+    arch-chroot /mnt useradd "$USERNAME" -m -g users -G wheel,lp,audio,storage,video,network,power
+    echo "$USERNAME":"$USER_PASSWORD1" | chpasswd --root /mnt
 }
 
 # User permissions
 user_permission() {
-    echo "${USERNAME} ALL=(ALL) ALL" >> /mnt/etc/sudoers.d/${USERNAME}
+    echo "$USERNAME ALL=(ALL) ALL" >> /mnt/etc/sudoers.d/"$USERNAME"
 }
 
 # Reboot
