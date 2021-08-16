@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+#                 arch install script
+# An arch install script based on installation guide.
+#           https://github.com/flame0x0/ais
 
 read -r -p "Disk (example: /dev/sda): " DISK
 read -r -p "Swap size for $DISK (examples: +512M, +1G): " SWAP_SIZE
@@ -147,7 +150,7 @@ boot_loader() {
 
 # Add user
 add_user() {
-    arch-chroot /mnt useradd "$USERNAME" -m -g users -G wheel,lp,audio,storage,video,network,power
+    arch-chroot /mnt useradd -m -G wheel "$USERNAME"
     echo "$USERNAME":"$USER_PASSWORD1" | chpasswd --root /mnt
 }
 
