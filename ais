@@ -3,30 +3,30 @@
 # An arch install script based on installation guide.
 #           https://github.com/flame0x0/ais
 
-read -r -p "Disk (example: /dev/sda): " DISK
+read -r -p 'Disk (example: /dev/sda): ' DISK
 read -r -p "Swap size for $DISK (examples: +512M, +1G): " SWAP_SIZE
-read -r -p "Timezone (examples: Europe/London, Asia/Tokyo): " TIMEZONE
-read -r -p "Hostname (example: arch): " HOSTNAME
+read -r -p 'Timezone (examples: Europe/London, Asia/Tokyo): ' TIMEZONE
+read -r -p 'Hostname (example: arch): ' HOSTNAME
 
-# Add password for root
+# Set the root password
 while true; do
-    read -s -r -p "Root password: " ROOT_PASSWORD0
+    read -s -r -p 'Root password: ' ROOT_PASSWORD0
     echo
-    read -s -r -p "Re-enter password: " ROOT_PASSWORD1
+    read -s -r -p 'Retype password: ' ROOT_PASSWORD1
     echo
     [[ "$ROOT_PASSWORD0" = "$ROOT_PASSWORD1" ]] && break
-    echo "Passwords did not match."
+    echo 'Passwords do not match.'
 done
 
 # Add user and its password
-read -r -p "Username: " USERNAME
+read -r -p 'Username: ' USERNAME
 while true; do
     read -s -r -p "Password for $USERNAME: " USER_PASSWORD0
     echo
-    read -s -r -p "Re-enter password: " USER_PASSWORD1
+    read -s -r -p 'Retype password: ' USER_PASSWORD1
     echo
     [[ "$USER_PASSWORD0" = "$USER_PASSWORD1" ]] && break
-    echo "Passwords did not match."
+    echo 'Passwords do not match.'
 done
 echo
 
@@ -110,15 +110,15 @@ time_zone() {
 generate_locale() {
     sed -i '/#en_US.UTF-8/s/^#//g' /mnt/etc/locale.gen
     arch-chroot /mnt locale-gen
-    echo "LANG=en_US.UTF-8" > /mnt/etc/locale.conf
+    echo 'LANG=en_US.UTF-8' > /mnt/etc/locale.conf
 }
 
 # Network configuration
 network_configuration() {
     echo "$HOSTNAME" > /mnt/etc/hostname
     {
-        echo "127.0.0.1 localhost"
-        echo "::1       localhost"
+        echo '127.0.0.1 localhost'
+        echo '::1       localhost'
         echo "127.0.1.1 $HOSTNAME.localdomain $HOSTNAME"
     } >> /mnt/etc/hosts
     arch-chroot /mnt systemctl enable NetworkManager.service
@@ -142,7 +142,7 @@ boot_loader() {
         sed -i \
             -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
             -e 's/\(GRUB_TIMEOUT=\)5/\120/g' \
-            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
+            -e "s/\(GRUB_CMDLINE_LINUX='\)'/\1'\nGRUB_DISABLE_OS_PROBER=false/g" \
             /mnt/etc/default/grub
     }
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
@@ -161,13 +161,12 @@ user_permission() {
 
 # Reboot
 reboot_machine() {
-    # Unmount all the partitions
     umount -R /mnt
-    echo "You may now reboot the machine."
+    echo 'Installation complete. You may now reboot the machine.'
 }
 
 main() {
-    set -euxo pipefail
+    set -euo pipefail
     system_clock
     partition_disk
     format_partition
