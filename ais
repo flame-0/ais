@@ -37,7 +37,6 @@ BASE_PACKAGES=(
 )
 
 OTHER_PACKAGES=(
-    amd-ucode
     base-devel
     grub
     nano
@@ -62,7 +61,7 @@ partition_disk() {
     # n          Add a new partition for swap
     # p          Partition type: Primary
     # 1          Partition number: 1
-    # default    First sector: default
+    #            First sector: default
     # $SWAP_SIZE Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
     # t          Change the partition type
     # 82         Hex code or alias: 82 (Linux swap / Solaris) or swap
@@ -79,14 +78,14 @@ partition_disk() {
 
 # Format the partitions
 format_partition() {
-    mkfs.ext4 "$DISK"2
-    mkswap "$DISK"1
+    mkfs.ext4 "${DISK}2"
+    mkswap "${DISK}1"
 }
 
 # Mount the file systems
 file_system() {
-    mount "$DISK"2 /mnt
-    swapon "$DISK"1
+    mount "${DISK}2" /mnt
+    swapon "${DISK}1"
 }
 
 # Install essential packages
@@ -124,12 +123,6 @@ network_configuration() {
     arch-chroot /mnt systemctl enable NetworkManager.service
 }
 
-# Initramfs
-create_initramfs() {
-    sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
-    arch-chroot /mnt mkinitcpio -p linux
-}
-
 # Root password
 root_password() {
     echo root:"$ROOT_PASSWORD1" | chpasswd --root /mnt
@@ -138,13 +131,6 @@ root_password() {
 # Boot loader
 boot_loader() {
     arch-chroot /mnt grub-install --target=i386-pc "$DISK"
-    {
-        sed -i \
-            -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
-            -e 's/\(GRUB_TIMEOUT=\)5/\120/g' \
-            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
-            /mnt/etc/default/grub
-    }
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
@@ -176,7 +162,6 @@ main() {
     time_zone
     generate_locale
     network_configuration
-    create_initramfs
     root_password
     boot_loader
     add_user
