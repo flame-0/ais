@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-#                 arch install script
-# An arch install script based on installation guide.
-#           https://github.com/flame0x0/ais
+#
+# ais - An arch install script based on installation guide.
+# https://github.com/flame-0/ais
 
 read -r -p 'Disk (example: /dev/sda): ' DISK
 read -r -p "Swap size for $DISK (examples: +512M, +1G): " SWAP_SIZE
