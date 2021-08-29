@@ -5,7 +5,7 @@
 
 read -r -p 'Disk (example: /dev/sda): ' DISK
 read -r -p "Swap size for $DISK (examples: +512M, +1G): " SWAP_SIZE
-read -r -p 'Timezone (examples: Europe/London, Asia/Tokyo): ' TIMEZONE
+read -r -p 'Time zone (examples: Europe/London, Asia/Tokyo): ' TIMEZONE
 read -r -p 'Hostname (example: arch): ' HOSTNAME
 
 # Set the root password
@@ -45,7 +45,7 @@ OTHER_PACKAGES=(
     os-prober
     xdg-user-dirs
     xf86-video-amdgpu
-    xorg
+    xorg-server
     xorg-xinit
 )
 
@@ -123,6 +123,12 @@ network_configuration() {
     arch-chroot /mnt systemctl enable NetworkManager.service
 }
 
+# Initramfs
+create_initramfs() {
+    sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
+    arch-chroot /mnt mkinitcpio -p linux
+}
+
 # Root password
 root_password() {
     echo root:"$ROOT_PASSWORD1" | chpasswd --root /mnt
@@ -131,6 +137,13 @@ root_password() {
 # Boot loader
 boot_loader() {
     arch-chroot /mnt grub-install --target=i386-pc "$DISK"
+    {
+        sed -i \
+            -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
+            -e 's/\(GRUB_TIMEOUT=\)5/\120/g' \
+            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
+            /mnt/etc/default/grub
+    }
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
