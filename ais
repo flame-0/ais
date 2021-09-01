@@ -38,15 +38,25 @@ BASE_PACKAGES=(
 
 OTHER_PACKAGES=(
     base-devel
+    firefox
+    git
     grub
+    htop
+    lxappearance
     nano
     networkmanager
+    nitrogen
     ntfs-3g
+    openbox
+    openssh
     os-prober
+    polkit
+    thunar
+    vim
+    xclip
     xdg-user-dirs
     xf86-video-amdgpu
     xorg-server
-    xorg-xinit
 )
 
 # Update the system clock
