@@ -185,6 +185,7 @@ main() {
     time_zone
     generate_locale
     network_configuration
+    create_initramfs
     root_password
     boot_loader
     add_user
