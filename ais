@@ -18,7 +18,7 @@ while true; do
     echo 'Passwords do not match.'
 done
 
-# Add user and its password
+# Username and password for user
 read -r -p 'Username: ' USERNAME
 while true; do
     read -s -r -p "Password for $USERNAME: " USER_PASSWORD0
@@ -37,7 +37,10 @@ BASE_PACKAGES=(
 )
 
 OTHER_PACKAGES=(
+    alacritty
     base-devel
+    discord
+    feh
     firefox
     git
     grub
@@ -47,11 +50,15 @@ OTHER_PACKAGES=(
     networkmanager
     nitrogen
     ntfs-3g
-    openbox
+    numlockx
+    obconf
     openssh
     os-prober
-    polkit
+    qbittorrent
+    telegram-desktop
     thunar
+    ttf-cascadia-code
+    ttf-jetbrains-mono
     vim
     xclip
     xdg-user-dirs
@@ -157,8 +164,8 @@ boot_loader() {
     arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
-# Add user
-add_user() {
+# Create user
+user_add() {
     arch-chroot /mnt useradd -m -G wheel "$USERNAME"
     echo "$USERNAME":"$USER_PASSWORD1" | chpasswd --root /mnt
 }
@@ -188,7 +195,7 @@ main() {
     create_initramfs
     root_password
     boot_loader
-    add_user
+    user_add
     user_permission
     reboot_machine
 }
