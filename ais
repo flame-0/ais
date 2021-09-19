@@ -3,40 +3,40 @@
 # ais - An arch install script based on installation guide.
 # https://github.com/flame-0/ais
 
-read -r -p 'Disk (example: /dev/sda): ' DISK
-read -r -p "Swap size for $DISK (examples: +512M, +1G): " SWAP_SIZE
-read -r -p 'Time zone (examples: Europe/London, Asia/Tokyo): ' TIMEZONE
-read -r -p 'Hostname (example: arch): ' HOSTNAME
+read -r -p 'Disk (example: /dev/sda): ' disk
+read -r -p "Swap size for $disk (examples: +512M, +1G): " swap_size
+read -r -p 'Time zone (examples: Europe/London, Asia/Tokyo): ' timezone
+read -r -p 'Hostname (example: arch): ' hostname
 
 # Set the root password
 while true; do
-    read -s -r -p 'Root password: ' ROOT_PASSWORD0
+    read -s -r -p 'Root password: ' root_password
     echo
-    read -s -r -p 'Retype password: ' ROOT_PASSWORD1
+    read -s -r -p 'Retype password: ' root_password_confirm
     echo
-    [[ "$ROOT_PASSWORD0" = "$ROOT_PASSWORD1" ]] && break
+    [[ "$root_password" = "$root_password_confirm" ]] && break
     echo 'Passwords do not match.'
 done
 
 # Username and password for user
-read -r -p 'Username: ' USERNAME
+read -r -p 'Username: ' username
 while true; do
-    read -s -r -p "Password for $USERNAME: " USER_PASSWORD0
+    read -s -r -p "Password for $username: " user_password
     echo
-    read -s -r -p 'Retype password: ' USER_PASSWORD1
+    read -s -r -p 'Retype password: ' user_password_confirm
     echo
-    [[ "$USER_PASSWORD0" = "$USER_PASSWORD1" ]] && break
+    [[ "$user_password" = "$user_password_confirm" ]] && break
     echo 'Passwords do not match.'
 done
 echo
 
-BASE_PACKAGES=(
+base_packages=(
     base
     linux
     linux-firmware
 )
 
-OTHER_PACKAGES=(
+other_packages=(
     alacritty
     base-devel
     discord
@@ -79,7 +79,7 @@ partition_disk() {
     # p          Partition type: Primary
     # 1          Partition number: 1
     #            First sector: default
-    # $SWAP_SIZE Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
+    # $swap_size Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
     # t          Change the partition type
     # 82         Hex code or alias: 82 (Linux swap / Solaris) or swap
     # n          Add a new partition for root
@@ -90,24 +90,24 @@ partition_disk() {
     # a          Toggle a bootable flag
     # 2          Partition number: 2
     # w          Write the table to disk
-    echo -e "o\nn\np\n1\n\n$SWAP_SIZE\nt\n82\nn\np\n2\n\n\na\n2\nw\n" | fdisk "$DISK"
+    echo -e "o\nn\np\n1\n\n$swap_size\nt\n82\nn\np\n2\n\n\na\n2\nw\n" | fdisk "$disk"
 }
 
 # Format the partitions
 format_partition() {
-    mkfs.ext4 "${DISK}2"
-    mkswap "${DISK}1"
+    mkfs.ext4 "${disk}2"
+    mkswap "${disk}1"
 }
 
 # Mount the file systems
 file_system() {
-    mount "${DISK}2" /mnt
-    swapon "${DISK}1"
+    mount "${disk}2" /mnt
+    swapon "${disk}1"
 }
 
 # Install essential packages
 install_package() {
-    pacstrap /mnt "${BASE_PACKAGES[@]}" "${OTHER_PACKAGES[@]}"
+    pacstrap /mnt "${base_packages[@]}" "${other_packages[@]}"
 }
 
 # Fstab
@@ -118,7 +118,7 @@ generate_fstab() {
 # Chroot phase
 # Time zone
 time_zone() {
-    ln -sf /usr/share/zoneinfo/"$TIMEZONE" /mnt/etc/localtime
+    ln -sf /usr/share/zoneinfo/"$timezone" /mnt/etc/localtime
     arch-chroot /mnt hwclock --systohc
 }
 
@@ -131,11 +131,11 @@ generate_locale() {
 
 # Network configuration
 network_configuration() {
-    echo "$HOSTNAME" > /mnt/etc/hostname
+    echo "$hostname" > /mnt/etc/hostname
     {
         echo '127.0.0.1 localhost'
         echo '::1       localhost'
-        echo "127.0.1.1 $HOSTNAME.localdomain $HOSTNAME"
+        echo "127.0.1.1 $hostname.localdomain $hostname"
     } >> /mnt/etc/hosts
     arch-chroot /mnt systemctl enable NetworkManager.service
 }
@@ -148,12 +148,12 @@ create_initramfs() {
 
 # Root password
 root_password() {
-    echo root:"$ROOT_PASSWORD1" | chpasswd --root /mnt
+    echo root:"$root_password" | chpasswd --root /mnt
 }
 
 # Boot loader
 boot_loader() {
-    arch-chroot /mnt grub-install --target=i386-pc "$DISK"
+    arch-chroot /mnt grub-install --target=i386-pc "$disk"
     {
         sed -i \
             -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
@@ -166,13 +166,13 @@ boot_loader() {
 
 # Create user
 user_add() {
-    arch-chroot /mnt useradd -m -G wheel "$USERNAME"
-    echo "$USERNAME":"$USER_PASSWORD1" | chpasswd --root /mnt
+    arch-chroot /mnt useradd -m -G wheel "$username"
+    echo "$username":"$user_password" | chpasswd --root /mnt
 }
 
 # User permissions
 user_permission() {
-    echo "$USERNAME ALL=(ALL) ALL" >> /mnt/etc/sudoers.d/"$USERNAME"
+    echo "$username ALL=(ALL) ALL" >> /mnt/etc/sudoers.d/"$username"
 }
 
 # Reboot
