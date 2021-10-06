@@ -45,10 +45,10 @@ other_packages=(
     git
     grub
     htop
+    kakoune
     lxappearance
-    nano
+    maim
     networkmanager
-    nitrogen
     ntfs-3g
     numlockx
     obconf
@@ -59,7 +59,6 @@ other_packages=(
     thunar
     ttf-cascadia-code
     ttf-jetbrains-mono
-    vim
     xclip
     xdg-user-dirs
     xf86-video-amdgpu
@@ -135,7 +134,7 @@ network_configuration() {
     {
         echo '127.0.0.1 localhost'
         echo '::1       localhost'
-        echo "127.0.1.1 $hostname.localdomain $hostname"
+        echo "127.0.1.1 $hostname"
     } >> /mnt/etc/hosts
     arch-chroot /mnt systemctl enable NetworkManager.service
 }
