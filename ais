@@ -3,12 +3,14 @@
 # ais - An arch install script based on installation guide.
 # https://github.com/flame-0/ais
 
-read -r -p 'Disk (example: /dev/sda): ' disk
-read -r -p "Swap size for $disk (examples: +512M, +1G): " swap_size
-read -r -p 'Time zone (examples: Europe/London, Asia/Tokyo): ' timezone
-read -r -p 'Hostname (example: arch): ' hostname
+read -r -p 'Disk: ' disk
+read -r -p "Swap size for $disk (default: +512M): " swap_size
+swap_size=${swap_size:-+512M}
 
-# Set the root password
+read -r -p 'Time zone: ' time_zone
+read -r -p 'Hostname (default: arch):' hostname
+hostname=${hostname:-arch}
+
 while true; do
     read -s -r -p 'Root password: ' root_password
     echo
@@ -18,7 +20,6 @@ while true; do
     echo 'Passwords do not match.'
 done
 
-# Username and password for user
 read -r -p 'Username: ' username
 while true; do
     read -s -r -p "Password for $username: " user_password
@@ -28,7 +29,12 @@ while true; do
     [[ "$user_password" = "$user_password_confirm" ]] && break
     echo 'Passwords do not match.'
 done
-echo
+
+read -r -p 'Set GRUB_DEFAULT (default: 0):' grub_default
+grub_default=${grub_default:-0}
+
+read -r -p 'Set GRUB_TIMEOUT (default: 5): ' grub_timeout
+grub_timeout=${grub_timeout:-5}
 
 base_packages=(
     base
@@ -45,9 +51,12 @@ other_packages=(
     git
     grub
     htop
-    kakoune
+    imagemagick
     lxappearance
     maim
+    man-db
+    man-pages
+    micro
     networkmanager
     ntfs-3g
     numlockx
@@ -62,6 +71,7 @@ other_packages=(
     xclip
     xdg-user-dirs
     xf86-video-amdgpu
+    xfce4-settings
     xorg-server
 )
 
@@ -117,7 +127,7 @@ generate_fstab() {
 # Chroot phase
 # Time zone
 time_zone() {
-    ln -sf /usr/share/zoneinfo/"$timezone" /mnt/etc/localtime
+    ln -sf /usr/share/zoneinfo/"$time_zone" /mnt/etc/localtime
     arch-chroot /mnt hwclock --systohc
 }
 
@@ -150,19 +160,6 @@ root_password() {
     echo root:"$root_password" | chpasswd --root /mnt
 }
 
-# Boot loader
-boot_loader() {
-    arch-chroot /mnt grub-install --target=i386-pc "$disk"
-    {
-        sed -i \
-            -e 's/\(GRUB_DEFAULT=\)0/\12/g' \
-            -e 's/\(GRUB_TIMEOUT=\)5/\120/g' \
-            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
-            /mnt/etc/default/grub
-    }
-    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
-}
-
 # Create user
 user_add() {
     arch-chroot /mnt useradd -m -G wheel "$username"
@@ -172,6 +169,19 @@ user_add() {
 # User permissions
 user_permission() {
     echo "$username ALL=(ALL) ALL" >> /mnt/etc/sudoers.d/"$username"
+}
+
+# Boot loader
+boot_loader() {
+    arch-chroot /mnt grub-install --target=i386-pc "$disk"
+    {
+        sed -i \
+            -e "s/\(GRUB_DEFAULT=\)0/\1$grub_default/g" \
+            -e "s/\(GRUB_TIMEOUT=\)5/\1$grub_timeout/g" \
+            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
+            /mnt/etc/default/grub
+    }
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
 }
 
 # Reboot
@@ -193,9 +203,9 @@ main() {
     network_configuration
     create_initramfs
     root_password
-    boot_loader
     user_add
     user_permission
+    boot_loader
     reboot_machine
 }
 
