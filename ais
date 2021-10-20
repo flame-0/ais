@@ -5,11 +5,11 @@
 
 read -r -p 'Disk: ' disk
 read -r -p "Swap size for $disk (default: +512M): " swap_size
-swap_size=${swap_size:-+512M}
+swap_size="${swap_size:-+512M}"
 
 read -r -p 'Time zone: ' time_zone
-read -r -p 'Hostname (default: arch):' hostname
-hostname=${hostname:-arch}
+read -r -p 'Hostname (default: arch): ' hostname
+hostname="${hostname:-arch}"
 
 while true; do
     read -s -r -p 'Root password: ' root_password
@@ -30,49 +30,51 @@ while true; do
     echo 'Passwords do not match.'
 done
 
-read -r -p 'Set GRUB_DEFAULT (default: 0):' grub_default
-grub_default=${grub_default:-0}
+read -r -p 'Set GRUB_DEFAULT (default: 0): ' grub_default
+grub_default="${grub_default:-0}"
 
 read -r -p 'Set GRUB_TIMEOUT (default: 5): ' grub_timeout
-grub_timeout=${grub_timeout:-5}
+grub_timeout="${grub_timeout:-5}"
 
 base_packages=(
-    base
-    linux
-    linux-firmware
+    'base'
+    'linux'
+    'linux-firmware'
 )
 
 other_packages=(
-    alacritty
-    base-devel
-    discord
-    feh
-    firefox
-    git
-    grub
-    htop
-    imagemagick
-    lxappearance
-    maim
-    man-db
-    man-pages
-    micro
-    networkmanager
-    ntfs-3g
-    numlockx
-    obconf
-    openssh
-    os-prober
-    qbittorrent
-    telegram-desktop
-    thunar
-    ttf-cascadia-code
-    ttf-jetbrains-mono
-    xclip
-    xdg-user-dirs
-    xf86-video-amdgpu
-    xfce4-settings
-    xorg-server
+    'alacritty'
+    'amd-ucode'
+    'base-devel'
+    'discord'
+    'feh'
+    'firefox'
+    'git'
+    'grub'
+    'htop'
+    'imagemagick'
+    'lxappearance'
+    'maim'
+    'man-db'
+    'man-pages'
+    'micro'
+    'networkmanager'
+    'ntfs-3g'
+    'numlockx'
+    'obconf'
+    'openssh'
+    'os-prober'
+    'qbittorrent'
+    'telegram-desktop'
+    'thunar'
+    'ttf-cascadia-code'
+    'ttf-jetbrains-mono'
+    'vlc'
+    'xclip'
+    'xdg-user-dirs'
+    'xf86-video-amdgpu'
+    'xfce4-settings'
+    'xorg-server'
 )
 
 # Update the system clock
@@ -157,13 +159,13 @@ create_initramfs() {
 
 # Root password
 root_password() {
-    echo root:"$root_password" | chpasswd --root /mnt
+    echo "root:$root_password" | chpasswd --root /mnt
 }
 
 # Create user
 user_add() {
     arch-chroot /mnt useradd -m -G wheel "$username"
-    echo "$username":"$user_password" | chpasswd --root /mnt
+    echo "$username:$user_password" | chpasswd --root /mnt
 }
 
 # User permissions
