@@ -116,6 +116,11 @@ file_system() {
     swapon "${disk}1"
 }
 
+# Reflector
+select_mirror() {
+    reflector --latest 200 --protocol http,https --sort rate --save /etc/pacman.d/mirrorlist
+}
+
 # Install essential packages
 install_package() {
     pacstrap /mnt "${base_packages[@]}" "${other_packages[@]}"
@@ -198,6 +203,7 @@ main() {
     partition_disk
     format_partition
     file_system
+    select_mirror
     install_package
     generate_fstab
     time_zone
