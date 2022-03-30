@@ -3,6 +3,8 @@
 # ais - An arch install script based on installation guide.
 # https://github.com/flame-0/ais
 
+set -e
+
 read -r -p 'Disk: ' disk
 read -r -p "Swap size for $disk (default: +512M): " swap_size
 swap_size="${swap_size:-+512M}"
@@ -89,15 +91,15 @@ partition_disk() {
     # n          Add a new partition for swap
     # p          Partition type: Primary
     # 1          Partition number: 1
-    #            First sector: default
+    # [enter]    First sector: default
     # $swap_size Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
     # t          Change the partition type
     # 82         Hex code or alias: 82 (Linux swap / Solaris) or swap
     # n          Add a new partition for root
     # p          Partition type: Primary
     # 2          Partition number: 2
-    #            First sector: default
-    #            Last sector (Suggested size: Remainder of the device): default
+    # [enter]    First sector: default
+    # [enter]    Last sector (Suggested size: Remainder of the device): default
     # a          Toggle a bootable flag
     # 2          Partition number: 2
     # w          Write the table to disk
@@ -116,9 +118,13 @@ file_system() {
     swapon "${disk}1"
 }
 
-# Reflector
+# Select the mirrors
 select_mirror() {
-    reflector --latest 200 --protocol http,https --sort rate --save /etc/pacman.d/mirrorlist
+    reflector --download-timeout 60 \
+              --latest 200 \
+              --protocol https \
+              --sort rate \
+              --save /etc/pacman.d/mirrorlist
 }
 
 # Install essential packages
@@ -198,7 +204,6 @@ reboot_machine() {
 }
 
 main() {
-    set -euo pipefail
     system_clock
     partition_disk
     format_partition
