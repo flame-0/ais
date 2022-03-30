@@ -121,7 +121,7 @@ file_system() {
 # Select the mirrors
 select_mirror() {
     reflector --download-timeout 60 \
-              --latest 200 \
+              --latest 5 \
               --protocol https \
               --sort rate \
               --save /etc/pacman.d/mirrorlist
