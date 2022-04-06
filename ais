@@ -53,6 +53,7 @@ other_packages=(
     'firefox'
     'git'
     'grub'
+    'gtk2-perl'
     'htop'
     'imagemagick'
     'lxappearance'
@@ -77,6 +78,7 @@ other_packages=(
     'xf86-video-amdgpu'
     'xfce4-settings'
     'xorg-server'
+    'xorg-xrandr'
 )
 
 # Update the system clock
@@ -87,7 +89,7 @@ system_clock() {
 # Partition the disks
 partition_disk() {
     # Standard input (stdin) for fdisk command:
-    # o          Create an empty DOS partition table
+    # o          Create a new empty DOS partition table
     # n          Add a new partition for swap
     # p          Partition type: Primary
     # 1          Partition number: 1
@@ -121,7 +123,7 @@ file_system() {
 # Select the mirrors
 select_mirror() {
     reflector --download-timeout 60 \
-              --latest 5 \
+              --latest 20 \
               --protocol https \
               --sort rate \
               --save /etc/pacman.d/mirrorlist
