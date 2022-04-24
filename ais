@@ -81,6 +81,7 @@ other_packages=(
     'xorg-server'
     'xorg-xrandr'
     'xsettingsd'
+    'xdotool'
 )
 
 # Update the system clock
