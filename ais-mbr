@@ -84,11 +84,6 @@ other_packages=(
     'xdotool'
 )
 
-# Update the system clock
-system_clock() {
-    timedatectl set-ntp true
-}
-
 # Partition the disks
 partition_disk() {
     # Standard input (stdin) for fdisk command:
@@ -125,16 +120,17 @@ file_system() {
 
 # Select the mirrors
 select_mirror() {
-    reflector --download-timeout 60 \
-              --latest 20 \
-              --protocol https \
-              --sort rate \
-              --save /etc/pacman.d/mirrorlist
+    reflector \
+        --download-timeout 60 \
+        --latest 20 \
+        --protocol https \
+        --sort rate \
+        --save /etc/pacman.d/mirrorlist
 }
 
 # Install essential packages
 install_package() {
-    pacstrap /mnt "${base_packages[@]}" "${other_packages[@]}"
+    pacstrap -K /mnt "${base_packages[@]}" "${other_packages[@]}"
 }
 
 # Fstab
@@ -169,7 +165,6 @@ network_configuration() {
 
 # Initramfs
 create_initramfs() {
-    sed -i '/MODULES=()/s/)$/amdgpu)/g' /mnt/etc/mkinitcpio.conf
     arch-chroot /mnt mkinitcpio -p linux
 }
 
@@ -209,7 +204,6 @@ reboot_machine() {
 }
 
 main() {
-    system_clock
     partition_disk
     format_partition
     file_system

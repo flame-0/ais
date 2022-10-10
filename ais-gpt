@@ -1,0 +1,237 @@
+#!/usr/bin/env bash
+#
+# ais - An arch install script based on installation guide.
+# https://github.com/flame-0/ais
+
+set -e
+
+read -r -p 'Disk: ' disk
+
+read -r -p "EFI size for $disk (default: +300M): " efi_size
+efi_size="${efi_size:-+300M}"
+
+read -r -p "Swap size for $disk (default: +512M): " swap_size
+swap_size="${swap_size:-+512M}"
+
+read -r -p 'Time zone: ' time_zone
+read -r -p 'Hostname (default: arch): ' hostname
+hostname="${hostname:-arch}"
+
+while true; do
+    read -s -r -p 'Root password: ' root_password
+    echo
+    read -s -r -p 'Retype password: ' root_password_confirm
+    echo
+    [[ "$root_password" = "$root_password_confirm" ]] && break
+    echo 'Passwords do not match.'
+done
+
+read -r -p 'Username: ' username
+while true; do
+    read -s -r -p "Password for $username: " user_password
+    echo
+    read -s -r -p 'Retype password: ' user_password_confirm
+    echo
+    [[ "$user_password" = "$user_password_confirm" ]] && break
+    echo 'Passwords do not match.'
+done
+
+read -r -p 'Set GRUB_DEFAULT (default: 0): ' grub_default
+grub_default="${grub_default:-0}"
+
+read -r -p 'Set GRUB_TIMEOUT (default: 5): ' grub_timeout
+grub_timeout="${grub_timeout:-5}"
+
+base_packages=(
+    'base'
+    'linux'
+    'linux-firmware'
+)
+
+other_packages=(
+    'alacritty'
+    'amd-ucode'
+    'base-devel'
+    'bspwm'
+    'btop'
+    'discord'
+    'efibootmgr'
+    'feh'
+    'firefox'
+    'git'
+    'grub'
+    'imagemagick'
+    'maim'
+    'man-db'
+    'man-pages'
+    'micro'
+    'networkmanager'
+    'npm'
+    'ntfs-3g'
+    'numlockx'
+    'openssh'
+    'os-prober'
+    'qbittorrent'
+    'reflector'
+    'sxhkd'
+    'telegram-desktop'
+    'thunar'
+    'ttf-cascadia-code'
+    'ttf-jetbrains-mono'
+    'vlc'
+    'xclip'
+    'xdg-user-dirs'
+    'xdotool'
+    'xf86-video-amdgpu'
+    'xfce4-settings'
+    'xorg-server'
+    'xorg-xrandr'
+    'xsettingsd'
+)
+
+# Partition the disks
+partition_disk() {
+    # Standard input (stdin) for fdisk command:
+    # g          Create a new empty GPT partition table
+    # n          Add a new partition for EFI
+    # 1          Partition number: 1
+    # [enter]    First sector: default
+    # $efi_size  Last sector (Suggested size: At least 300 MiB): +300M/+1G/+2G
+    # t          Change the partition type
+    # 1          Partition type or alias: 1 = EFI System
+    # n          Add a new partition for swap
+    # 2          Partition number: 2
+    # [enter]    First sector: default
+    # $swap_size Last sector (Suggested size: More than 512 MiB): +512M/+1G/+2G
+    # t          Change the partition type
+    # 2          Partition number: 2
+    # 19         Partition type or alias: 19 = Linux swap
+    # n          Add a new partition for root
+    # 3          Partition number: 3
+    # [enter]    First sector: default
+    # [enter]    Last sector: default
+    # t          Change the partition type
+    # 3          Partition number: 3
+    # 23         Partition type or alias: 23 = Linux root (x86-64)
+    # w          Write the table to disk    
+    echo -e "g\nn\n1\n\n$efi_size\nt\n1\nn\n2\n\n$swap_size\nt\n2\n19\nn\n3\n\n\nt\n3\n23\nw\n" | fdisk "$disk"
+}
+
+# Format the partitions
+format_partition() {
+    mkfs.ext4 "${disk}3"
+    mkswap "${disk}2"
+    mkfs.fat -F 32 "${disk}1"
+}
+
+# Mount the file systems
+file_system() {
+    mount "${disk}3" /mnt
+    mount --mkdir "${disk}1" /mnt/boot
+    swapon "${disk}2"
+}
+
+# Select the mirrors
+select_mirror() {
+    reflector \
+        --download-timeout 60 \
+        --latest 20 \
+        --protocol https \
+        --sort rate \
+        --save /etc/pacman.d/mirrorlist
+}
+
+# Install essential packages
+install_package() {
+    pacstrap -K /mnt "${base_packages[@]}" "${other_packages[@]}"
+}
+
+# Fstab
+generate_fstab() {
+    genfstab -U /mnt >> /mnt/etc/fstab
+}
+
+# Chroot phase
+# Time zone
+time_zone() {
+    ln -sf /usr/share/zoneinfo/"$time_zone" /mnt/etc/localtime
+    arch-chroot /mnt hwclock --systohc
+}
+
+# Localization
+generate_locale() {
+    sed -i '/#en_US.UTF-8/s/^#//g' /mnt/etc/locale.gen
+    arch-chroot /mnt locale-gen
+    echo 'LANG=en_US.UTF-8' > /mnt/etc/locale.conf
+}
+
+# Network configuration
+network_configuration() {
+    echo "$hostname" > /mnt/etc/hostname
+    {
+        echo '127.0.0.1 localhost'
+        echo '::1       localhost'
+        echo "127.0.1.1 $hostname"
+    } >> /mnt/etc/hosts
+    arch-chroot /mnt systemctl enable NetworkManager.service
+}
+
+# Initramfs
+create_initramfs() {
+    arch-chroot /mnt mkinitcpio -p linux
+}
+
+# Root password
+root_password() {
+    echo "root:$root_password" | chpasswd --root /mnt
+}
+
+# Create user
+user_add() {
+    arch-chroot /mnt useradd -m -G wheel "$username"
+    echo "$username:$user_password" | chpasswd --root /mnt
+}
+
+# User permissions
+user_permission() {
+    echo "$username ALL=(ALL) ALL" >> /mnt/etc/sudoers.d/"$username"
+}
+
+# Boot loader
+boot_loader() {
+    arch-chroot /mnt grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=GRUB
+    {
+        sed -i \
+            -e "s/\(GRUB_DEFAULT=\)0/\1$grub_default/g" \
+            -e "s/\(GRUB_TIMEOUT=\)5/\1$grub_timeout/g" \
+            -e 's/\(GRUB_CMDLINE_LINUX="\)"/\1"\nGRUB_DISABLE_OS_PROBER=false/g' \
+            /mnt/etc/default/grub
+    }
+    arch-chroot /mnt grub-mkconfig -o /boot/grub/grub.cfg
+}
+
+# Reboot
+reboot_machine() {
+    umount -R /mnt
+    echo 'Installation complete. You may now reboot the machine.'
+}
+
+main() {
+    partition_disk
+    format_partition
+    file_system
+    select_mirror
+    install_package
+    generate_fstab
+    time_zone
+    generate_locale
+    network_configuration
+    create_initramfs
+    root_password
+    user_add
+    user_permission
+    boot_loader
+    reboot_machine
+}
+
+main
