@@ -52,41 +52,27 @@ other_packages=(
     'alacritty'
     'amd-ucode'
     'base-devel'
-    'bspwm'
     'btop'
     'discord'
-    'efibootmgr'
-    'feh'
     'firefox'
     'git'
     'grub'
-    'imagemagick'
-    'maim'
     'man-db'
     'man-pages'
     'micro'
     'networkmanager'
-    'npm'
     'ntfs-3g'
+    'hyprland'
+    'grim'
     'numlockx'
     'openssh'
     'os-prober'
-    'qbittorrent'
     'reflector'
-    'sxhkd'
     'telegram-desktop'
     'thunar'
-    'ttf-cascadia-code'
     'ttf-jetbrains-mono'
     'vlc'
-    'xclip'
     'xdg-user-dirs'
-    'xdotool'
-    'xf86-video-amdgpu'
-    'xfce4-settings'
-    'xorg-server'
-    'xorg-xrandr'
-    'xsettingsd'
 )
 
 # Partition the disks
@@ -113,7 +99,7 @@ partition_disk() {
     # t          Change the partition type
     # 3          Partition number: 3
     # 23         Partition type or alias: 23 = Linux root (x86-64)
-    # w          Write the table to disk    
+    # w          Write the table to disk
     echo -e "g\nn\n1\n\n$efi_size\nt\n1\nn\n2\n\n$swap_size\nt\n2\n19\nn\n3\n\n\nt\n3\n23\nw\n" | fdisk "$disk"
 }
 
