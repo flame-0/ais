@@ -49,29 +49,18 @@ base_packages=(
 )
 
 other_packages=(
-    'alacritty'
     'amd-ucode'
     'base-devel'
-    'btop'
-    'discord'
-    'firefox'
     'git'
     'grub'
-    'man-db'
-    'man-pages'
     'micro'
     'networkmanager'
     'ntfs-3g'
-    'hyprland'
-    'grim'
     'numlockx'
     'openssh'
     'os-prober'
     'reflector'
-    'telegram-desktop'
-    'thunar'
     'ttf-jetbrains-mono'
-    'vlc'
     'xdg-user-dirs'
 )
 
